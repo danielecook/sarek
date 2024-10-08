@@ -8,6 +8,7 @@ include { BAM_VARIANT_CALLING_MPILEUP as MPILEUP_NORMAL } from '../bam_variant_c
 include { BAM_VARIANT_CALLING_MPILEUP as MPILEUP_TUMOR  } from '../bam_variant_calling_mpileup/main'
 include { BAM_VARIANT_CALLING_SOMATIC_ASCAT             } from '../bam_variant_calling_somatic_ascat/main'
 include { BAM_VARIANT_CALLING_SOMATIC_CONTROLFREEC      } from '../bam_variant_calling_somatic_controlfreec/main'
+include { BAM_VARIANT_CALLING_SOMATIC_DEEPSOMATIC           } from '../bam_variant_calling_somatic_deepsomatic/main'
 include { BAM_VARIANT_CALLING_SOMATIC_MANTA             } from '../bam_variant_calling_somatic_manta/main'
 include { BAM_VARIANT_CALLING_SOMATIC_MUTECT2           } from '../bam_variant_calling_somatic_mutect2/main'
 include { BAM_VARIANT_CALLING_SOMATIC_STRELKA           } from '../bam_variant_calling_somatic_strelka/main'
@@ -127,6 +128,20 @@ workflow BAM_VARIANT_CALLING_SOMATIC_ALL {
         versions = versions.mix(BAM_VARIANT_CALLING_CNVKIT.out.versions)
     }
 
+    // DEEPSOMATIC
+    if (tools.split(',').contains('deepsomatic')) {
+        BAM_VARIANT_CALLING_SOMATIC_DEEPSOMATIC(
+            cram,
+            dict,
+            fasta,
+            fasta_fai,
+            intervals
+        )
+
+        vcf_deepsomatic = Channel.empty().mix(BAM_VARIANT_CALLING_SOMATIC_DEEPSOMATIC.out.vcf)
+        versions = versions.mix(BAM_VARIANT_CALLING_SOMATIC_DEEPSOMATIC.out.versions)
+    }
+
     // FREEBAYES
     if (tools.split(',').contains('freebayes')) {
         BAM_VARIANT_CALLING_FREEBAYES(
@@ -226,6 +241,7 @@ workflow BAM_VARIANT_CALLING_SOMATIC_ALL {
     }
 
     vcf_all = Channel.empty().mix(
+        vcf_deepsomatic,
         vcf_freebayes,
         vcf_manta,
         vcf_mutect2,
@@ -236,6 +252,7 @@ workflow BAM_VARIANT_CALLING_SOMATIC_ALL {
     emit:
     out_msisensorpro
     vcf_all
+    vcf_deepsomatic
     vcf_freebayes
     vcf_manta
     vcf_mutect2
